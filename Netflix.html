@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Netflix SQL Analysis Project | Mahesh Bore</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      margin: 0;
+      padding: 40px 20px;
+      background: #f8f6f2;
+      color: #222;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 950px;
+      margin: auto;
+      background: #fff;
+      padding: 35px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    h1, h2, h3 {
+      color: #b91c1c;
+    }
+    pre {
+      background: #eee;
+      padding: 12px;
+      overflow-x: auto;
+      border-radius: 5px;
+    }
+    code {
+      font-family: monospace;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    a {
+      color: #0d6efd;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    .social {
+      margin-top: 30px;
+    }
+    .social a {
+      margin-right: 20px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 style="text-align: center;">Netflix Movies and TV Shows Data Analysis using SQL</h1>
+<div style="text-align: center;">
+  <img src="Netflix Logo.jpg" alt="Netflix Logo" width="600"/>
+</div>
+
+    <h2>📌 Overview</h2>
+    <p>This project explores Netflix's content dataset using SQL. We solve 15 business problems by querying, filtering, grouping, and analyzing the data to generate insights on trends, categories, and content behavior.</p>
+
+    <h2>🎯 Objectives</h2>
+    <ul>
+      <li>Analyze distribution of content types</li>
+      <li>Explore most common ratings, release years, and genres</li>
+      <li>Find popular directors, actors, and countries</li>
+      <li>Handle null values and clean the dataset</li>
+      <li>Use SQL to answer business-focused questions</li>
+    </ul>
+
+    <h2>🗃️ Database Schema</h2>
+    <pre><code>CREATE TABLE netflix (
+  show_id VARCHAR(5),
+  type VARCHAR(10),
+  title VARCHAR(250),
+  director VARCHAR(550),
+  casts VARCHAR(1050),
+  country VARCHAR(550),
+  date_added VARCHAR(55),
+  release_year INT,
+  rating VARCHAR(15),
+  duration VARCHAR(15),
+  listed_in VARCHAR(250),
+  description VARCHAR(550)
+);</code></pre>
+
+    <h2>📊 15 Business Problems and SQL Queries</h2>
+
+    <h3>1. Count Movies vs TV Shows</h3>
+    <pre><code>SELECT type, COUNT(type) AS Movies_VS_TVShows FROM netflix GROUP BY type;</code></pre>
+
+    <h3>2. Most Common Rating by Type</h3>
+    <pre><code>SELECT type, rating
+FROM (
+  SELECT type, rating, COUNT(*),
+         RANK() OVER(PARTITION BY type ORDER BY COUNT(*) DESC) AS Common_Rating
+  FROM netflix
+  GROUP BY type, rating
+) AS t1
+WHERE Common_Rating = 1;</code></pre>
+
+    <h3>3. Movies Released in 2020</h3>
+    <pre><code>SELECT title FROM netflix WHERE type='Movie' AND release_year=2020;</code></pre>
+
+    <h3>4. Top 5 Countries by Content</h3>
+    <pre><code>SELECT UNNEST(STRING_TO_ARRAY(country, ',')) AS new_country,
+       COUNT(show_id) AS total_content
+FROM netflix
+GROUP BY new_country
+ORDER BY total_content DESC
+LIMIT 5;</code></pre>
+
+    <h3>5. Longest Movie</h3>
+    <pre><code>SELECT title, duration FROM netflix
+WHERE type='Movie' AND duration = (
+  SELECT MAX(duration) FROM netflix WHERE type='Movie'
+);</code></pre>
+
+    <h3>6. Content Added in Last 5 Years</h3>
+    <pre><code>SELECT * FROM netflix
+WHERE TO_DATE(date_added, 'Month DD, YYYY') >= CURRENT_DATE - INTERVAL '5 years';</code></pre>
+
+    <h3>7. Shows Directed by Rajiv Chilaka</h3>
+    <pre><code>SELECT * FROM netflix WHERE director ILIKE '%Rajiv Chilaka%';</code></pre>
+
+    <h3>8. TV Shows with More Than 5 Seasons</h3>
+    <pre><code>SELECT * FROM netflix
+WHERE type='TV Show' AND duration >= '5 Seasons';</code></pre>
+
+    <h3>9. Count by Genre</h3>
+    <pre><code>SELECT UNNEST(STRING_TO_ARRAY(listed_in, ',')) AS genre,
+       COUNT(show_id) AS Genre_count
+FROM netflix
+GROUP BY genre
+ORDER BY Genre_count DESC;</code></pre>
+
+    <h3>10. Top 5 Years for Content from India</h3>
+    <pre><code>SELECT EXTRACT(YEAR FROM TO_DATE(date_added,'Month DD, YYYY')) AS Year,
+       COUNT(*) AS Yearly_Content
+FROM netflix
+WHERE country ILIKE '%India%'
+GROUP BY Year
+ORDER BY Yearly_Content DESC
+LIMIT 5;</code></pre>
+
+    <h3>11. Documentaries on Netflix</h3>
+    <pre><code>SELECT * FROM netflix WHERE listed_in ILIKE '%documentaries%';</code></pre>
+
+    <h3>12. Content Without Directors</h3>
+    <pre><code>SELECT * FROM netflix WHERE director = 'Director Not Available';</code></pre>
+
+    <h3>13. Movies with Salman Khan in Last 10 Years</h3>
+    <pre><code>SELECT * FROM netflix
+WHERE casts ILIKE '%Salman Khan%'
+  AND release_year >= EXTRACT(YEAR FROM CURRENT_DATE) - 10;</code></pre>
+
+    <h3>14. Top 10 Actors in Indian Content</h3>
+    <pre><code>SELECT UNNEST(STRING_TO_ARRAY(casts, ',')) AS Actors,
+       COUNT(show_id) AS Actors_Count
+FROM netflix
+WHERE country ILIKE '%India%' AND casts <> 'Casts Not Available'
+GROUP BY Actors
+ORDER BY Actors_Count DESC
+LIMIT 10;</code></pre>
+
+    <h3>15. Categorize Content as Good/Bad (based on description)</h3>
+    <pre><code>WITH category AS (
+  SELECT *,
+    CASE 
+      WHEN description ILIKE '%kill%' OR description ILIKE '%violence%' THEN 'BAD Content'
+      ELSE 'GOOD Content'
+    END AS content_description
+  FROM netflix
+)
+SELECT content_description, COUNT(*)
+FROM category
+GROUP BY content_description;</code></pre>
+
+    <h2>✅ Findings & Conclusion</h2>
+    <ul>
+      <li><strong>Content Diversity:</strong> Netflix offers a broad mix of content across genres and countries.</li>
+      <li><strong>Ratings & Type:</strong> TV-MA is the most common, with movies leading in volume.</li>
+      <li><strong>Geographic Trends:</strong> India, USA, and UK contribute most content.</li>
+      <li><strong>Content Safety:</strong> Descriptions help in filtering “good” vs “violent” content.</li>
+    </ul>
+
+    <h2>📬 Connect with Me</h2>
+    <div class="social">
+      <a href="https://www.instagram.com/decent_mahi03/" target="_blank">Instagram</a>
+      <a href="https://www.linkedin.com/in/maheshbore03/" target="_blank">LinkedIn</a>
+    </div>
+  </div>
+</body>
+</html>
